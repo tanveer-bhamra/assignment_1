@@ -7,33 +7,20 @@ from rasterio import features
 from rasterio.windows import Window
 import numpy as np
 
+# Task 1 - User input
 
+x_cord = int(input("please enter a numeric easting coordinate value between 430000 - 465000: "))
+y_cord = int(input("please enter a numeric Northing coordinate value between 80000 - 95000: "))
 
-# Task 1 User Input
+while y_cord < 80000 or y_cord > 95000 or x_cord < 430000 or x_cord > 465000:
+    x_cord = int(input("Insufficent Easting coordinate. Please enter a numeric easting coordinate value between 430000 - 465000: "))
+    y_cord = int(input("Insufficent Northing coordinate.Please enter a numeric Northing coordinate value between 80000 - 95000: "))
+else:
+    print("Your location ", x_cord, " Easting and ", y_cord, " Northing is within the northing and easting limits ")
+        
+point = Point(x_cord,y_cord)
 
-def user_input():
-    while True:
-        try:
-            x_point = float(input("Enter an Easting coordinate value: "))
-            y_point = float(input("Enter a Northing coordinate : "))
-            user_loc = Point(x_point, y_point)
-            island_mbr: Polygon = Polygon([(430000, 95000), (430000, 80000), (465000, 80000), (465000, 95000)])
-            break
-        except:
-            print('Please enter a valid Easting and Northing ')
-            user_input()
-            
-    if user_loc.within(island_mbr):
-        print('inside')
-    else:
-        print("Not within the software's boundary\nBoundary extends: \n 430000 - 465000 East\n 80000 - 95000 North"
-              " \n Please input a new coordinates\n\n ")
-        user_input()
-        # quit software
-    return user_loc, print('within boundary')  # remove the print when program works
-
-
-point = user_input()
+    
 
 # Task 2 Highest Point Identification - Identify the highest point within a 5km radius from the user location.
 
@@ -61,4 +48,20 @@ width = elevation_file.width #coloumns
 elevation_window = elevation_file.read(1, window=Window(col_off, row_off, width, height))
 
 # print(elevation_window.shape)
+
+
+# create a 5km buffer around the inputted point object
+
+buffer = point.buffer(5000)
+
+
+
+
+
+
+
+
+
+
+
 
