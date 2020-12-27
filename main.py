@@ -88,9 +88,10 @@ from rtree import index
 
 
 # TASK 3 - Nearest Integrated Transport Network
-
-# highest point 439007.5 85192.5)
-highest_point_cord = [439007.5, 85192.5]
+# test point to copy and paste   435000,85000
+# highest point for test point  439007.5 85192.5 #( test points can be deleted when completed)
+highest_point_cord = [439007.5, 85192.5] #( test points can be deleted when completed)
+point = Point(435000, 85000)  #( test points can be deleted when completed)
 
 # load itn file
 itn_json = os.path.join("Material/itn/solent_itn.json")
@@ -98,31 +99,31 @@ with open(itn_json, 'r') as f:
     itn_json = json.load(f)
 
 road_nodes = itn_json['roadnodes']
-# coodinate of roads
+# coordinate of roads
 node_coord = []
 
 # initalise r tree
 idx = index.Index()
 
-
-id_list= []
+# inserting coordinates,fid into rtree
+id_list = []
 for i, (coord_id, coords) in enumerate(road_nodes.items()):
     node_co = (coords['coords'])
     id_list.append(coord_id)
-    # print(node1[0],'\t',node1[1],'\t', node1)
-    idx.insert(i, (node_co[0], node_co[1], node_co[0], node_co[1]))
+    idx.insert(i, (node_co[0], node_co[1], node_co[0], node_co[1]), coord_id)
 
 
-
+# Query to find  the nearest fid for the highest point
+# fid for highest test point osgb4000000026227672
 for i in idx.nearest((highest_point_cord), 1):
-    nearest_node = id_list[i]
-    print(nearest_node)
+    highest_node = id_list[i]
+    print(highest_node)
 
-# nearest node osgb4000000026227672
-
-
-
-
+# Query to find  the nearest fid for the highest point
+# fid for  user test point osgb4000000026141631
+for i in idx.nearest((point.x,point.y), 1):
+    user_node = id_list[i]
+    print(user_node)
 # REFERENCES:
 
 # https://numpy.org/doc/stable/reference/generated/numpy.argmax.html
