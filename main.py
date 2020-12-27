@@ -99,10 +99,9 @@ with open(itn_json, 'r') as f:
     itn_json = json.load(f)
 
 road_nodes = itn_json['roadnodes']
-# coordinate of roads
 node_coord = []
 
-# initalise r tree
+# initialize rtree
 idx = index.Index()
 
 # inserting coordinates,fid into rtree
@@ -119,11 +118,18 @@ for i in idx.nearest((highest_point_cord), 1):
     highest_node = id_list[i]
     print(highest_node)
 
-# Query to find  the nearest fid for the highest point
+# Query to find  the nearest fid for the users point
 # fid for  user test point osgb4000000026141631
 for i in idx.nearest((point.x,point.y), 1):
     user_node = id_list[i]
     print(user_node)
+
+#Task  4:  Shortest  Path
+
+#load Json road links
+#load json roadnodes
+
+
 # REFERENCES:
 
 # https://numpy.org/doc/stable/reference/generated/numpy.argmax.html
