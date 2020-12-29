@@ -5,27 +5,33 @@ import rasterio
 from rasterio import features
 from rasterio.windows import Window
 from rasterio import plot
+import matplotlib.pyplot as plt
+import networkx as nx
 import numpy as np
 import json
 import os
 from rtree import index
+from scipy import sparse
 
-# Task 1 - User input
+# # Task 1 - User input
+#
+# x_cord = int(input("please enter a numeric Easting coordinate value between 430000 - 465000: "))
+# while x_cord < 430000 or x_cord > 465000:
+#     x_cord = int(input(
+#         "Entry not in range. Please enter a numeric easting coordinate value between 430000 - 465000: "))
+# else:
+#     y_cord = int(input("please enter a numeric Northing coordinate value between 80000 - 95000: "))
+#     while y_cord < 80000 or y_cord > 95000:
+#         y_cord = int(input(
+#             "Entry not in range. Please enter a numeric Northing coordinate value between 80000 - 95000: "))
+#     else:
+#         print("Your location ", x_cord, " Easting and ", y_cord, " Northing is within the northing and easting "
+#                                                                  "bounds ")
+#
+# point = Point(x_cord, y_cord)
 
-x_cord = int(input("please enter a numeric Easting coordinate value between 430000 - 465000: "))
-while x_cord < 430000 or x_cord > 465000:
-    x_cord = int(input(
-        "Entry not in range. Please enter a numeric easting coordinate value between 430000 - 465000: "))
-else:
-    y_cord = int(input("please enter a numeric Northing coordinate value between 80000 - 95000: "))
-    while y_cord < 80000 or y_cord > 95000:
-        y_cord = int(input(
-            "Entry not in range. Please enter a numeric Northing coordinate value between 80000 - 95000: "))
-    else:
-        print("Your location ", x_cord, " Easting and ", y_cord, " Northing is within the northing and easting "
-                                                                 "bounds ")
-
-point = Point(x_cord, y_cord)
+# Practice Point
+point = Point(439000, 85000)
 
 # # test point to copy and paste   435000,85000
 #
@@ -102,8 +108,9 @@ itn_json = os.path.join("Material/itn/solent_itn.json")
 with open(itn_json, 'r') as f:
     itn_json = json.load(f)
 
+road_links = itn_json['roadlinks']
 road_nodes = itn_json['roadnodes']
-node_coord = []
+
 
 # initialize rtree
 idx = index.Index()
@@ -118,23 +125,63 @@ for i, (coord_id, coords) in enumerate(road_nodes.items()):
         idx.insert(i, (node_co[0], node_co[1], node_co[0], node_co[1]), coord_id)
 
 # Query to find  the nearest fid for the users point
-# fid for  user test point osgb4000000026141631
 for i in idx.nearest((point.x,point.y), 1):
-    user_node = id_list[i]
-    print(user_node)
+    start_node_name = id_list[i]
 
 # Query to find  the nearest fid for the highest point
-# fid for highest test point osgb4000000026227672
 
-for i in idx.nearest((highest_point_cord), 1):
-    highest_node = id_list[i]
-    print(highest_node)
+for i in idx.nearest(highest_point_cord, 1):
+    dest_node_name = id_list[i]
 
 # Task  4:  Shortest  Path
 
-# load Json road links
-# load json roadnodes
-# create network graph
+# Determine difference in height
+
+start_node_coords = road_nodes[start_node_name]['coords']
+dest_node_coords = road_nodes[dest_node_name]['coords']
+
+start_node_array_coords = elevation_file.index(start_node_coords[0], start_node_coords[1])
+dest_node_array_coords = elevation_file.index(dest_node_coords[0], dest_node_coords[1])
+
+start_node_elevation = clipped_elevation_matrix[start_node_array_coords[0], start_node_array_coords[1]]
+dest_node_elevation = clipped_elevation_matrix[dest_node_array_coords[0], dest_node_array_coords[1]]
+delta_elevation = dest_node_elevation-start_node_elevation
+
+# Instantiate graph
+
+# g = nx.DiGraph()
+g = nx.Graph()
+
+# Add road lines
+
+for edge in road_links:
+    g.add_edge(road_links[edge]['start'], road_links[edge]['end'], weight=road_links[edge]['length'])
+
+# Dijkstra
+
+path = nx.dijkstra_path(g, source=start_node_name, target=dest_node_name, weight='weight')
+
+# Network Length and time to traverse
+
+# print('gnodes: ', g.nodes)
+# print('gedges: ', g.edges)
+
+network_length = 0
+number_of_nodes_on_path = len(path)
+
+for node in path:
+    print(node)
+
+
+# Printing Results
+# print('Starting Node: ', start_node_name)
+# print('Destination Node: ', dest_node_name)
+# # print('Total Network Length: ', network_length)
+# print('Delta Elevation: ', delta_elevation)
+print('Dijkstra Path: ', path)
+
+# rasterio.plot.show(clipped_elevation_matrix)
+
 
 # REFERENCES:
 
