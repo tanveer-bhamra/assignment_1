@@ -147,7 +147,7 @@ start_node_elevation = clipped_elevation_matrix[start_node_array_coords[0], star
 dest_node_elevation = clipped_elevation_matrix[dest_node_array_coords[0], dest_node_array_coords[1]]
 delta_elevation = dest_node_elevation-start_node_elevation
 
-# Instantiate graph
+# Instantiate graph a
 
 # g = nx.DiGraph()
 g = nx.Graph()
