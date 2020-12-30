@@ -50,27 +50,26 @@ n_lim = 100000
 s_lim = 75000
 e_lim = 470000
 
-
 # create a 5km buffer around the inputted point object
 
 buffer = point.buffer(5000)
 
-#apply affine transformation to map pixel/cell locations to spatial positions
+# apply affine transformation to map pixel/cell locations to spatial positions
 
 affine_tr = rasterio.transform.from_bounds(w_lim, s_lim,
-                               e_lim, n_lim,
-                               elevation_shape[1], elevation_shape[0])
+                                           e_lim, n_lim,
+                                           elevation_shape[1], elevation_shape[0])
 
 # Converting a buffer vector geometry into raster  where cells are ones (inside 5km buffer)
 # or zeros (outside 5km buffer)
 
-buffer_raster = rasterio.features.rasterize([(buffer, 1)], out_shape = elevation_shape,
-                                                transform= affine_tr)
+buffer_raster = rasterio.features.rasterize([(buffer, 1)], out_shape=elevation_shape,
+                                            transform=affine_tr)
 
 # convert buffer matrix into boolean data type
 buffer_bool = buffer_raster.astype(bool)
 
-#invert buffer_bool matrix
+# invert buffer_bool matrix
 buffer_bool_inv = ~buffer_bool
 
 # clip elevation_matrix array using buffer array
@@ -79,8 +78,8 @@ clipped_elevation_matrix[buffer_bool_inv] = np.nan
 
 # find maximum height in the buffer
 
-row_idx, col_idx = np.unravel_index(np.nanargmax(clipped_elevation_matrix,),
-                                     elevation_shape)
+row_idx, col_idx = np.unravel_index(np.nanargmax(clipped_elevation_matrix, ),
+                                    elevation_shape)
 
 # return highest point in meters in 5km buffer region
 
@@ -93,9 +92,7 @@ x_max_cord, y_max_cord = elevation_file.xy(row_idx, col_idx)
 # create a point object  and list of highest point inside 5km buffer
 
 highest_point = Point(x_max_cord, y_max_cord)
-highest_point_cord = [x_max_cord,y_max_cord]
-
-
+highest_point_cord = [x_max_cord, y_max_cord]
 
 # TASK 3 - Nearest Integrated Transport Network
 # test point to copy and paste   435000,85000
@@ -111,7 +108,6 @@ with open(itn_json, 'r') as f:
 road_links = itn_json['roadlinks']
 road_nodes = itn_json['roadnodes']
 
-
 # initialize rtree
 idx = index.Index()
 
@@ -125,7 +121,7 @@ for i, (coord_id, coords) in enumerate(road_nodes.items()):
         idx.insert(i, (node_co[0], node_co[1], node_co[0], node_co[1]), coord_id)
 
 # Query to find  the nearest fid for the users point
-for i in idx.nearest((point.x,point.y), 1):
+for i in idx.nearest((point.x, point.y), 1):
     start_node_name = id_list[i]
 
 # Query to find  the nearest fid for the highest point
@@ -137,53 +133,74 @@ for i in idx.nearest(highest_point_cord, 1):
 
 # Determine difference in height
 
-start_node_coords = road_nodes[start_node_name]['coords']
-dest_node_coords = road_nodes[dest_node_name]['coords']
-
-start_node_array_coords = elevation_file.index(start_node_coords[0], start_node_coords[1])
-dest_node_array_coords = elevation_file.index(dest_node_coords[0], dest_node_coords[1])
-
-start_node_elevation = clipped_elevation_matrix[start_node_array_coords[0], start_node_array_coords[1]]
-dest_node_elevation = clipped_elevation_matrix[dest_node_array_coords[0], dest_node_array_coords[1]]
-delta_elevation = dest_node_elevation-start_node_elevation
-
-# Instantiate graph a
-
-# g = nx.DiGraph()
 g = nx.Graph()
 
-# Add road lines
+# Add edges road lines using road_links data
 
 for edge in road_links:
-    g.add_edge(road_links[edge]['start'], road_links[edge]['end'], weight=road_links[edge]['length'])
+    g.add_edge(road_links[edge]['start'], road_links[edge]['end'], length=road_links[edge]['length'])
+
+# Calculate the amount of time it would take to walk the edge, irrespective of elevation at 5km/h
+
+for u, v in g.edges:
+    g.edges[u, v]['base_time'] = (g.edges[u, v]['length'])/1.38889
+
+# Calculate the change in elevation along each edge
+expanded_buffer = point.buffer(7500)
+
+# Converting a buffer vector geometry into raster  where cells are ones (inside 5km buffer)
+# or zeros (outside 5km buffer)
+
+expanded_buffer_raster = rasterio.features.rasterize([(buffer, 1)], out_shape=elevation_shape,
+                                            transform=affine_tr)
+
+# convert buffer matrix into boolean data type
+expanded_buffer_bool = expanded_buffer_raster.astype(bool)
+
+# invert buffer_bool matrix
+expanded_buffer_bool_inv = ~expanded_buffer_bool
+
+expanded_buffer_search = elevation_matrix.copy()
+expanded_buffer_search[buffer_bool_inv] = np.nan
+
+for u, v in g.edges:
+    u_node_coords = road_nodes[u]['coords']
+    u_node_array_coords = elevation_file.index(u_node_coords[0], u_node_coords[1])
+    u_node_elevation = expanded_buffer_search[u_node_array_coords[0], u_node_array_coords[1]]
+
+    v_node_coords = road_nodes[v]['coords']
+    v_node_array_coords = elevation_file.index(v_node_coords[0], v_node_coords[1])
+    v_node_elevation = expanded_buffer_search[v_node_array_coords[0], v_node_array_coords[1]]
+
+    delta_elevation = v_node_elevation - u_node_elevation
+    g.edges[u, v]['delta_elevation'] = delta_elevation
+
+# Use change in elevation to calculate the elevation-added time, add to base time to calculate the total time
+
+for u, v in g.edges:
+    if g.edges[u, v]['delta_elevation'] > 0:
+        naismith_time = g.edges[u, v]['delta_elevation'] * 6
+    else:
+        naismith_time = 0
+    total_time = g.edges[u, v]['base_time'] + naismith_time
+    g.edges[u, v]['total_time'] = total_time
+
+# print(g.edges(data=True))
 
 # Dijkstra
+#
+path = nx.dijkstra_path(g, source=start_node_name, target=dest_node_name, weight='total_time')
 
-path = nx.dijkstra_path(g, source=start_node_name, target=dest_node_name, weight='weight')
-
-# Network Length and time to traverse
-
-# print('gnodes: ', g.nodes)
-# print('gedges: ', g.edges)
-
-network_length = 0
-number_of_nodes_on_path = len(path)
-
-for node in path:
-    print(node)
-
-
-# Printing Results
-# print('Starting Node: ', start_node_name)
-# print('Destination Node: ', dest_node_name)
-# # print('Total Network Length: ', network_length)
-# print('Delta Elevation: ', delta_elevation)
+# printing results
+print('starting node: ', start_node_name)
+print('destination node: ', dest_node_name)
 print('Dijkstra Path: ', path)
-
-# rasterio.plot.show(clipped_elevation_matrix)
-
-
-# REFERENCES:
+print('Example of edge attributes:')
+print(g[path[6]][path[7]])
+#
+# rasterio.plot.show(elevation_matrix)
+#
+# # REFERENCES:
 
 # https://numpy.org/doc/stable/reference/generated/numpy.argmax.html
 # https://rasterio.readthedocs.io/en/latest/api/rasterio.transform.html
