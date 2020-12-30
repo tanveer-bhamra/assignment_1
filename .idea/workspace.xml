@@ -116,6 +116,7 @@
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Completed Task 3,load ITN find nearest node" />
@@ -165,10 +166,14 @@
     </state>
     <state width="1899" height="352" key="GridCell.Tab.1.right/0.0.1920.1050/1920.0.1280.689@0.0.1920.1050" timestamp="1608997492952" />
     <state width="1899" height="443" key="GridCell.Tab.1.right/0.0.1920.1050@0.0.1920.1050" timestamp="1609021827003" />
-    <state x="184" y="86" key="MergeDialog" timestamp="1609234175712">
+    <state x="184" y="86" key="MergeDialog" timestamp="1609335416745">
       <screen x="0" y="0" width="1920" height="1050" />
     </state>
-    <state x="184" y="86" key="MergeDialog/0.0.1920.1050@0.0.1920.1050" timestamp="1609234175712" />
+    <state x="184" y="86" key="MergeDialog/0.0.1920.1050@0.0.1920.1050" timestamp="1609335416745" />
+    <state x="598" y="286" key="MultipleFileMergeDialog" timestamp="1609335416753">
+      <screen x="0" y="0" width="1920" height="1050" />
+    </state>
+    <state x="598" y="286" key="MultipleFileMergeDialog/0.0.1920.1050@0.0.1920.1050" timestamp="1609335416753" />
     <state x="461" y="169" key="SettingsEditor" timestamp="1608996408618">
       <screen x="0" y="0" width="1920" height="1050" />
     </state>
@@ -181,5 +186,16 @@
       <screen x="0" y="0" width="1920" height="1050" />
     </state>
     <state x="777" y="438" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/0.0.1920.1050@0.0.1920.1050" timestamp="1609234138870" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>149</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>
