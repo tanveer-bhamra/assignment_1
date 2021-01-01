@@ -1,37 +1,45 @@
 # import modules
 from shapely.geometry import Polygon
 from shapely.geometry import Point
+from shapely.geometry import LineString
+import geopandas as gpd
+import matplotlib.pyplot as plt
+from cartopy import crs
 import rasterio
 from rasterio import features
 from rasterio.windows import Window
 from rasterio import plot
+from rasterio.plot import show
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcol
 import networkx as nx
 import numpy as np
 import json
 import os
 from rtree import index
 from scipy import sparse
+import cartopy.crs as ccrs
+import cartopy
 
 # # Task 1 - User input
-#
-# x_cord = int(input("please enter a numeric Easting coordinate value between 430000 - 465000: "))
-# while x_cord < 430000 or x_cord > 465000:
-#     x_cord = int(input(
-#         "Entry not in range. Please enter a numeric easting coordinate value between 430000 - 465000: "))
-# else:
-#     y_cord = int(input("please enter a numeric Northing coordinate value between 80000 - 95000: "))
-#     while y_cord < 80000 or y_cord > 95000:
-#         y_cord = int(input(
-#             "Entry not in range. Please enter a numeric Northing coordinate value between 80000 - 95000: "))
-#     else:
-#         print("Your location ", x_cord, " Easting and ", y_cord, " Northing is within the northing and easting "
-#                                                                  "bounds ")
-#
-# point = Point(x_cord, y_cord)
+
+x_cord = int(input("please enter a numeric Easting coordinate value between 430000 - 465000: "))
+while x_cord < 430000 or x_cord > 465000:
+    x_cord = int(input(
+        "Entry not in range. Please enter a numeric easting coordinate value between 430000 - 465000: "))
+else:
+    y_cord = int(input("please enter a numeric Northing coordinate value between 80000 - 95000: "))
+    while y_cord < 80000 or y_cord > 95000:
+        y_cord = int(input(
+            "Entry not in range. Please enter a numeric Northing coordinate value between 80000 - 95000: "))
+    else:
+        print("Your location ", x_cord, " Easting and ", y_cord, " Northing is within the northing and easting "
+                                                                  "bounds ")
+
+point = Point(x_cord, y_cord)
 
 # Practice Point
-point = Point(439000, 85000)
+#point = Point(439000, 85000)
 
 # # test point to copy and paste   435000,85000
 #
@@ -138,7 +146,7 @@ g = nx.Graph()
 # Add edges road lines using road_links data
 
 for edge in road_links:
-    g.add_edge(road_links[edge]['start'], road_links[edge]['end'], length=road_links[edge]['length'])
+    g.add_edge(road_links[edge]['start'], road_links[edge]['end'], fid=edge, length=road_links[edge]['length'])
 
 # Calculate the amount of time it would take to walk the edge, irrespective of elevation at 5km/h
 
@@ -197,8 +205,131 @@ print('destination node: ', dest_node_name)
 print('Dijkstra Path: ', path)
 print('Example of edge attributes:')
 print(g[path[6]][path[7]])
+
+# create a starting point (first node in ITN) 
+start_node_coords = road_nodes[path[0]]['coords']
+start_point = Point(start_node_coords[0], start_node_coords[1])
+#create a destination point (last node in index)
+end_node_coords = road_nodes[path[-1]]['coords']
+destination_point = Point(end_node_coords[0], end_node_coords[1])
+
+# STEP5 - PLOTTING MAPS AND DATA
+
+
+# read in raster-50k_2724246.tif file as map_tif
+
+map_tif = rasterio.open("Material/background/raster-50k_2724246.tif")
+
+# draw out and cut the window for background map plotting
+
+width_of_map = 11000
+height_of_map = 11000
+
+western_map_edge, eastern_map_edge = point.x - (width_of_map/2), point.x + (width_of_map/2)
+southern_map_edge, northern_map_edge = point.y - (height_of_map/2), point.y + (height_of_map/2)
+
+#identify rows and coloumns of the pixels of the NW and SE corner in the background map
+row_west, col_north, = map_tif.index(western_map_edge, northern_map_edge)
+row_east, col_south  = map_tif.index( eastern_map_edge, southern_map_edge)
+
+#define map height and width
+map_height = row_east - row_west +10
+map_width = col_south - col_north +10
+# print(map_width)
+# print(map_height)
+
+# create window for background map
+window_map = map_tif.read(1, window=Window(col_north, row_west, 
+                                           map_width, map_height))
+
+# create and cut a window for the elevation map
+
+# identify rows and columns of the pixels (in the eleavtion array) 
+# row and column of NW corner 
+row_west1, col_north1 = elevation_file.index(western_map_edge, northern_map_edge)
+# row and column of SE corner
+row_east1, col_south1 = elevation_file.index(eastern_map_edge, southern_map_edge)
+
+#width and height of window
+elevation_height = row_east1 - row_west1 +10
+elevation_width = col_south1 - col_north1 + 10
+ 
+# BNG coordinates of NW corner.
+elevation_west, elevation_north = elevation_file.xy(row_west1,
+                                                 col_north1,
+                                                 offset='ul')
+# BNG coordinates of SE corner.
+elevation_east, elevation_south = elevation_file.xy(row_west1+elevation_height,
+                                                 col_north1+elevation_width,
+                                                 offset='ul')
+# create a  list of the N,W,S,E extents
+elevation_extents = [elevation_west,
+                     elevation_east,
+                     elevation_south,
+                     elevation_north]
+
+# cut the window in the elevation array
+elevation_matrix_cut = elevation_file.read(1, window= Window(col_north1,
+                          row_west1,
+                          elevation_width,
+                          elevation_height))
+
+# create a GeoDataFrame of the shortest path
+
+links = [] # this list will be used to populate the feature id (fid) column
+geom  = [] # this list will be used to populate the geometry column
+
+first_node = path[0]
+for node in path[1:]:
+    link_fid = g.edges[first_node, node]['fid']
+    links.append(link_fid)
+    geom.append(LineString(road_links[link_fid]['coords']))
+    first_node = node
+
+shortest_path_gpd = gpd.GeoDataFrame({'fid': links, 'geometry': geom})
+shortest_path_gpd.plot()
+
+# backgrund extents
+background_extents = [western_map_edge, eastern_map_edge, southern_map_edge, northern_map_edge]
+
+# specify map colour
+
+palette = np.array([value for key, value in
+                    map_tif.colormap(1).items()])
+background_map = palette[window_map]
+
+#plot map
+
+# Plot background map
+fig = plt.figure(figsize=(3, 3), dpi=300)
+ax = fig.add_subplot(1, 1, 1, projection=crs.OSGB())
+
+ax.imshow(background_map, origin='upper', extent=background_extents, zorder=0)
+ax.set_extent(background_extents, crs=crs.OSGB())
+
+# plot shortest path on background map
+shortest_path_gpd.plot(ax=ax, edgecolor='blue', linewidth=0.5, zorder=2)
+
+#plot user input point
+plt.scatter(point.x, point.y, marker = "x", s=5)
+#plot starting point
+plt.scatter(start_point.x, start_point.y, s=5)
+
+# plot ending point
+plt.scatter(destination_point.x, destination_point.y, s=5)
+
+#plot buffer region
+circle1=plt.Circle((point.x,point.y),5000,color='b', fill = False, linewidth=0.5)
+plt.gcf().gca().add_artist(circle1)
+
+# plot elevation array
+ax.imshow(elevation_matrix_cut, origin='upper', alpha=0.5, 
+          extent=elevation_extents, transform=ccrs.OSGB(), zorder=1)
+
+
 #
-# rasterio.plot.show(elevation_matrix)
+rasterio.plot.show(elevation_matrix)
+rasterio.plot.show(clipped_elevation_matrix)
 #
 # # REFERENCES:
 
