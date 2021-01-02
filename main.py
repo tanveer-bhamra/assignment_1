@@ -222,8 +222,8 @@ map_tif = rasterio.open("Material/background/raster-50k_2724246.tif")
 
 # draw out and cut the window for background map plotting
 
-width_of_map = 11000
-height_of_map = 11000
+width_of_map = 10000
+height_of_map = 10000
 
 western_map_edge, eastern_map_edge = point.x - (width_of_map/2), point.x + (width_of_map/2)
 southern_map_edge, northern_map_edge = point.y - (height_of_map/2), point.y + (height_of_map/2)
@@ -298,8 +298,6 @@ palette = np.array([value for key, value in
                     map_tif.colormap(1).items()])
 background_map = palette[window_map]
 
-#plot map
-
 # Plot background map
 fig = plt.figure(figsize=(3, 3), dpi=300)
 ax = fig.add_subplot(1, 1, 1, projection=crs.OSGB())
@@ -308,30 +306,48 @@ ax.imshow(background_map, origin='upper', extent=background_extents, zorder=0)
 ax.set_extent(background_extents, crs=crs.OSGB())
 
 # plot shortest path on background map
-shortest_path_gpd.plot(ax=ax, edgecolor='blue', linewidth=0.5, zorder=2)
+shortest_path_gpd.plot(ax=ax, edgecolor='blue', linewidth=0.5, zorder=2,label='shortest path')
 
 #plot user input point
-plt.scatter(point.x, point.y, marker = "x", s=5)
+plt.scatter(point.x, point.y, marker = "x", s=5,label='Your starting point')
 #plot starting point
-plt.scatter(start_point.x, start_point.y, s=5)
+plt.scatter(start_point.x, start_point.y, s=5,label='The routes starting point')
 
 # plot ending point
-plt.scatter(destination_point.x, destination_point.y, s=5)
+plt.scatter(destination_point.x, destination_point.y, s=5,label='Destination')
 
 #plot buffer region
-circle1=plt.Circle((point.x,point.y),5000,color='b', fill = False, linewidth=0.5)
-plt.gcf().gca().add_artist(circle1)
+circle1=plt.Circle((point.x,point.y),5000,color='red', fill = False, linewidth=0.5,label='5km Buffer zone')
+circle_buff = plt.gcf().gca().add_artist(circle1)
+circle_buff.set_label('5km Buffer')
+
 
 # plot elevation array
-ax.imshow(elevation_matrix_cut, origin='upper', alpha=0.5, 
+elev_img = ax.imshow(elevation_matrix_cut, origin='upper', alpha=0.3,
           extent=elevation_extents, transform=ccrs.OSGB(), zorder=1)
 
+#Colour bar for elevation
+colour_bar = plt.colorbar(elev_img,label='Elevation')
 
-#
-rasterio.plot.show(elevation_matrix)
-rasterio.plot.show(clipped_elevation_matrix)
-#
-# # REFERENCES:
+plt.title('Isle of Wight Emergency Route Planner')
+
+#Create North arrow
+box = dict(boxstyle="rarrow,pad=0.3", fc="black", ec="k")
+ax.text((point.x + 4000), (point.y + 4000), "    ", rotation=90,
+        size=4,
+        bbox=box)
+# 5km scale - change to text fraction
+plt.annotate(' ',xy=(point.x,(point.y - 4700)), xytext= ((point.x + 5000) ,(point.y - 4700)),
+             arrowprops= dict(arrowstyle="-"))
+plt.text(point.x + 2000, (point.y - 4500), '5km')
+plt.axhline(y=point.y - 4000, xmin=point.x, xmax=point.x +5000)
+plt.legend(loc='best', fontsize=3, bbox_to_anchor=(0.9, -0.02), ncol=3)
+
+
+
+
+plt.show()
+
 
 # https://numpy.org/doc/stable/reference/generated/numpy.argmax.html
 # https://rasterio.readthedocs.io/en/latest/api/rasterio.transform.html
