@@ -20,6 +20,7 @@ from rtree import index
 from scipy import sparse
 import cartopy.crs as ccrs
 import cartopy
+from matplotlib_scalebar.scalebar import ScaleBar
 
 # # Task 1 - User input
 
@@ -337,11 +338,16 @@ ax.text((point.x + 4000), (point.y + 4000), "    ", rotation=90,
         size=4,
         bbox=box)
 # 5km scale - change to text fraction
-plt.annotate(' ',xy=(point.x,(point.y - 4700)), xytext= ((point.x + 5000) ,(point.y - 4700)),
-             arrowprops= dict(arrowstyle="-"))
-plt.text(point.x + 2000, (point.y - 4500), '5km')
-plt.axhline(y=point.y - 4000, xmin=point.x, xmax=point.x +5000)
+#plt.annotate(' ',xy=(point.x,(point.y - 4700)), xytext= ((point.x + 5000) ,(point.y - 4700)),
+            # arrowprops= dict(arrowstyle="-"))
+#plt.text(point.x + 2000, (point.y - 4500), '5km')
+# plt.axhline(y=point.y - 4000, xmin=point.x, xmax=point.x +5000)
+
 plt.legend(loc='best', fontsize=3, bbox_to_anchor=(0.9, -0.02), ncol=3)
+#Scalebar
+scalebar = ScaleBar(0.08,length_fraction=0.25,scale_formatter = lambda value, unit: f"{2.5} {'Km'}",label_loc= 'top',
+                    location='lower right')
+ax.add_artist(scalebar)
 
 
 
